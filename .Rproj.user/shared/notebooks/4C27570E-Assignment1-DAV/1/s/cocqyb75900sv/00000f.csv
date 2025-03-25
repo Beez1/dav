@@ -1,0 +1,4 @@
+"0","hist(data$Income,"
+"0","     main = ""Distribution of Income"","
+"0","     xlab = ""Income"","
+"0","     ylab = ""Frequency"")"

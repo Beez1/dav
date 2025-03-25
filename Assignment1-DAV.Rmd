@@ -1,0 +1,211 @@
+---
+title: "Assignment1-DAV"
+author: "EMMANUEL GODWIN BASSEY"
+date: "2025-03-03"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+# Load required libraries
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(corrplot)
+library(stringr)
+library(psych)
+library(mice)
+```
+
+## 1. Load the Data
+
+```{r load-bike_data}
+# Parse CSV into bike_data
+bike_data <- read.csv("Bike Buyers Assignment 1.csv", stringsAsFactors = FALSE)
+str(bike_data)
+summary(bike_data)
+head(bike_data)
+```
+
+## 2. Data Cleaning
+```{r clean-bike_data}
+# Checking for duplicate IDs
+duplicate_count <- sum(duplicated(bike_data$ID))
+cat("Duplicate IDs:", duplicate_count, "\n\n")
+
+# Expected values for categorical variables
+expected_marital <- c("Married", "Single")
+expected_gender <- c("Male", "Female")
+expected_education <- c("Bachelors", "Partial College", "High School", "Graduate Degree", "Partial High School")
+expected_home_owner <- c("Yes", "No")
+expected_commute <- c("0-1 Miles", "1-2 Miles", "2-5 Miles", "5-10 Miles", "10+ Miles")
+expected_region <- c("Europe", "North America", "Pacific")
+expected_purchase <- c("Yes", "No")
+
+# Function to check incorrect values
+check_invalid_values <- function(column, expected) {
+  invalid_values <- setdiff(unique(bike_data[[column]]), expected)
+  cat("Incorrect values in", column, ":", if(length(invalid_values) == 0) "None" else invalid_values, "\n")
+}
+
+# Run checks
+check_invalid_values("Marital.Status", expected_marital)
+check_invalid_values("Gender", expected_gender)
+check_invalid_values("Education", expected_education)
+check_invalid_values("Home.Owner", expected_home_owner)
+check_invalid_values("Commute.Distance", expected_commute)
+check_invalid_values("Region", expected_region)
+check_invalid_values("Purchased.Bike", expected_purchase)
+
+# Check numeric columns for negative values
+for (col in c("Income", "Children", "Cars", "Age")) {
+  invalid_values <- bike_data[[col]][bike_data[[col]] < 0]
+  cat("Invalid values in", col, ":", if(length(invalid_values) == 0) "None" else invalid_values, "\n")
+}
+```
+
+## 3. Identify Missing Values
+
+```{r check-missing}
+# Check for missing values in each column, treating empty strings as NA
+missing_bike_data <- sapply(bike_data, function(x) sum(is.na(x) | x == ""))
+print(missing_bike_data)
+
+# Display total missing values across all columns
+total_missing <- sum(missing_bike_data)
+cat("Total missing values in bike_data:", total_missing, "\n\n")
+```
+
+## 4. Impute Missing Values
+
+```{r impute-missing-values, message=FALSE, warning=FALSE}
+# Convert categorical variables to factors
+categorical_vars <- c("Marital.Status", "Gender", "Education", "Occupation", 
+                      "Home.Owner", "Commute.Distance", "Region", "Purchased.Bike")
+bike_data[categorical_vars] <- lapply(bike_data[categorical_vars], as.factor)
+
+# Save indices of missing values
+missing_indices <- lapply(bike_data, function(x) which(is.na(x) | x == ""))
+
+# Impute missing values using MICE
+imputed_data <- mice(bike_data, m = 5, method = "pmm", seed = 123)
+bike_data <- complete(imputed_data, 1)
+
+# Check missing values after imputation
+missing_bike_data_after <- sapply(bike_data, function(x) sum(is.na(x) | x == ""))
+print(missing_bike_data_after)
+
+# Display updated values
+cat("Updated imputed values per variable:\n\n")
+for (var in names(missing_indices)) {
+  indices <- missing_indices[[var]]
+  if (length(indices) > 0) {
+    cat("Variable:", var, " | Count:", length(indices), "\n")
+    print(data.frame(Row = indices, ImputedValue = bike_data[[var]][indices]))
+  }
+}
+```
+
+## 5. Checking for Outliers
+
+```{r check-outliers, fig.width=7, fig.height=5}
+# Define a function to detect outliers using the IQR method
+detect_outliers <- function(x) {
+  x_clean <- na.omit(x)
+  Q1 <- quantile(x_clean, 0.25)
+  Q3 <- quantile(x_clean, 0.75)
+  IQR_val <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR_val
+  upper_bound <- Q3 + 1.5 * IQR_val
+  outliers <- x_clean[x_clean < lower_bound | x_clean > upper_bound]
+  return(outliers)
+}
+
+# Detect and print outliers for Income, Age, Children, and Cars
+outlier_vars <- c("Income", "Age", "Children", "Cars")
+for (var in outlier_vars) {
+  outliers <- detect_outliers(bike_data[[var]])
+  cat(var, "outliers:", if (length(outliers) == 0) "None" else outliers, "\n")
+  cat("Count of", var, "outliers:", length(outliers), "\n\n")
+}
+```
+
+## 6. Data Visualization
+
+```{r clean-categorical}
+# Summary of Variables
+str(bike_data)
+summary(bike_data)
+numeric_vars <- sapply(bike_data, is.numeric)
+describe(bike_data[, numeric_vars])
+
+# Pie Chart for Region
+region_counts <- table(bike_data$Region)
+pie(region_counts, main = "Pie Chart: Distribution of Regions", labels = paste(names(region_counts), "(", region_counts, ")"))
+
+# Bar Chart for Education Levels
+barplot(table(bike_data$Education), main = "Bar Chart: Education Levels", xlab = "Education Level", ylab = "Frequency", col = "skyblue", las = 2)
+
+# Histogram for Income Distribution
+hist(bike_data$Income, breaks = 20, main = "Histogram: Income Distribution", xlab = "Income", ylab = "Frequency", col = "red")
+
+# Scatter Plot for Income vs. Age
+plot(bike_data$Age, bike_data$Income, main = "Scatter Plot: Income vs. Age", xlab = "Age", ylab = "Income", pch = 19, col = "blue")
+```
+
+## 7. Purchased Bike Analysis
+
+```{r purchased-bike-analysis, echo=TRUE, message=FALSE, warning=FALSE}
+# Histogram of Income Variable with Summary Statistics
+hist(bike_data$Income, breaks = 20, main = "Histogram: Income Distribution", xlab = "Income", ylab = "Frequency", col = "lightblue")
+
+# Summary Statistics
+income_stats <- c(Mean = mean(bike_data$Income), Median = median(bike_data$Income), Variance = var(bike_data$Income))
+print(income_stats)
+
+# Grouping Bikers by Income Ranges
+bike_data$Income_Group <- cut(bike_data$Income, breaks = quantile(bike_data$Income, probs = c(0, 0.33, 0.66, 1), na.rm = TRUE),
+                               include.lowest = TRUE, labels = c("Low", "Medium", "High"))
+income_group_summary <- bike_data %>% 
+  group_by(Income_Group) %>% 
+  summarise(Total_Count = n(),
+            Purchased_Count = sum(Purchased.Bike == "Yes", na.rm = TRUE),
+            Purchased_Percent = round(100 * mean(Purchased.Bike == "Yes", na.rm = TRUE), 2))
+print(income_group_summary)
+
+# Correlation of Attributes with Purchased Bike
+bike_data$Purchased.Bike.Num <- ifelse(bike_data$Purchased.Bike == "Yes", 1, 0)
+correlations <- cor(bike_data[, sapply(bike_data, is.numeric)], use = "complete.obs")
+corrplot(correlations, method = "number", title = "Correlation Matrix")
+
+# Density Plot: Income by Bike Purchase
+ggplot(bike_data, aes(x = Income, fill = Purchased.Bike)) +
+  geom_density(alpha = 0.5) +
+  labs(title = "Density Plot of Income by Bike Purchase", x = "Income", y = "Density")
+
+# Clean Gender Before Plot
+bike_data$Gender[bike_data$Gender == ""] <- "Missing"
+bike_data$Gender <- factor(bike_data$Gender, levels = c("Male", "Female", "Missing"))
+
+# Age vs Gender Histogram
+ggplot(bike_data, aes(x = Age, fill = Gender)) +
+  geom_histogram(binwidth = 5, position = "dodge") +
+  labs(title = "Age Distribution by Gender", x = "Age", y = "Count")
+
+```
+
+## 8. Conclusions & Next Steps
+
+- **Data Cleaning:** Missing values imputed using mice, outliers detected using IQR.
+- **EDA Findings:** Distributions of key variables analyzed, correlations identified.
+- **Next Steps:**
+  - Further statistical tests (e.g., Chi-square for categorical variables).
+  - Consider transformations for skewed variables like Income.
+  - Scale the process for larger datasets, ensuring robust missing-value handling.
+
+```{r final-head, echo=FALSE}
+# Final look at cleaned data
+head(bike_data)
+```

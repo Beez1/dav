@@ -1,0 +1,164 @@
+---
+title: "Assignment1-DAV"
+author: "EMMANUEL GODWIN BASSEY"
+date: "2025-03-03"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+# Load required libraries
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(corrplot)
+library(stringr)
+```
+
+## 1. Load the Data
+
+```{r load-data}
+# Replace the file path with the correct path to your CSV
+# e.g., "Bike Buyers Assignment 1.csv"
+data <- read.csv("Bike Buyers Assignment 1.csv", stringsAsFactors = FALSE)
+
+# Structure of the data
+str(data)
+
+# Preview the first few rows
+head(data)
+```
+
+## 2. Identify Missing Values
+
+```{r check-missing}
+# Count missing values by column
+colSums(is.na(data))
+```
+
+- Suppose we see missing values in the `Gender` column.  
+- We'll fill them with "Unknown".
+
+```{r fill-missing}
+data$Gender[is.na(data$Gender)] <- "Unknown"
+colSums(is.na(data))
+```
+
+## 3. Checking for Outliers
+
+```{r check-outliers, fig.width=7, fig.height=5}
+# Numeric columns of interest
+numeric_cols <- c("Income", "Children", "Cars", "Age")
+
+# Summary stats
+summary(data[numeric_cols])
+
+# Boxplots for quick outlier detection
+par(mfrow=c(2,2))
+for(col in numeric_cols){
+  boxplot(data[[col]], main=paste("Boxplot of", col), ylab=col)
+}
+par(mfrow=c(1,1))
+```
+
+*(Decide whether any extreme values should be removed or capped. For this example, we'll leave them if they seem valid.)*
+
+## 4. Convert / Clean Categorical Columns
+
+```{r clean-categorical}
+# Convert Home Owner to TRUE / FALSE
+data$Home.Owner <- ifelse(tolower(data$Home.Owner) == "yes", TRUE, FALSE)
+
+# Convert Purchased Bike to 1 / 0
+data$Purchased.Bike <- ifelse(tolower(data$Purchased.Bike) == "yes", 1, 0)
+
+# Confirm changes
+head(data[, c("Home.Owner","Purchased.Bike")])
+```
+
+## 5. Exploratory Data Analysis (EDA)
+
+### 5.1 Distributions of Key Variables
+
+#### Age Distribution
+
+```{r age-dist, fig.width=5, fig.height=4}
+hist(data$Age, 
+     main = "Distribution of Age", 
+     xlab = "Age", 
+     ylab = "Frequency")
+```
+
+#### Income Distribution
+
+```{r income-dist, fig.width=5, fig.height=4}
+hist(data$Income,
+     main = "Distribution of Income",
+     xlab = "Income",
+     ylab = "Frequency")
+```
+
+#### Children Distribution
+
+```{r children-dist, fig.width=5, fig.height=4}
+barplot(table(data$Children),
+        main = "Number of Children",
+        xlab = "Children",
+        ylab = "Count")
+```
+
+### 5.2 Categorical vs. Categorical Relationships
+
+Example: **Marital Status** vs. **Purchased Bike**.
+
+```{r marital-purchase}
+marital_bike <- table(data$Marital.Status, data$Purchased.Bike)
+marital_bike
+
+barplot(marital_bike,
+        main = "Marital Status vs. Purchased Bike",
+        xlab = "Purchased Bike (0=No, 1=Yes)",
+        col = c("lightblue","pink"),  # optional color choices
+        legend = rownames(marital_bike),
+        beside = TRUE)
+```
+
+### 5.3 Correlation Among Numeric Variables
+
+We'll look at `Income`, `Children`, `Cars`, `Age`, and `Purchased.Bike` (now 0/1).
+
+```{r correlation}
+numeric_vars <- c("Income", "Children", "Cars", "Age", "Purchased.Bike")
+cor_data <- data[, numeric_vars]
+
+cor_matrix <- cor(cor_data)
+cor_matrix
+
+# Visualize with corrplot
+corrplot(cor_matrix, method = "circle")
+```
+
+## 6. Conclusions & Next Steps
+
+- **Data Cleaning**  
+  - Replaced missing `Gender` with `"Unknown"`.  
+  - Checked numeric columns for outliers; no extreme invalid entries found.  
+  - Converted `Home.Owner` and `Purchased.Bike` to more analysis-friendly formats.  
+
+- **EDA Findings**  
+  - Basic distributions (Age, Income, etc.) look reasonable.  
+  - Preliminary correlations may offer hints for further investigation.  
+  - Categorical relationships (e.g., Marital Status vs. Purchased Bike) can inform demographic patterns.
+
+- **Next Steps**  
+  - Perform deeper statistical tests (e.g., Chi-square for categorical variables).  
+  - Explore transformations for skewed variables like Income if needed.  
+  - Scale up this process for larger datasets, ensuring robust missing-value handling and outlier treatment.
+
+```{r final-head, echo=FALSE}
+# Final look at the cleaned data
+head(data)
+```
+``````markdown

@@ -1,0 +1,8 @@
+"0","# Convert Home Owner to TRUE / FALSE"
+"0","data$Home.Owner <- ifelse(tolower(data$Home.Owner) == ""yes"", TRUE, FALSE)"
+"0",""
+"0","# Convert Purchased Bike to 1 / 0"
+"0","data$Purchased.Bike <- ifelse(tolower(data$Purchased.Bike) == ""yes"", 1, 0)"
+"0",""
+"0","# Confirm changes"
+"0","head(data[, c(""Home.Owner"",""Purchased.Bike"")])"
