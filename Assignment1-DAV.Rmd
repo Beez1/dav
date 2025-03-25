@@ -1,6 +1,6 @@
 ---
 title: "Assignment1-DAV"
-author: "EMMANUEL GODWIN BASSEY"
+author: "EMMANUEL GODWIN BASSEY || S/N: 3092017"
 date: "2025-03-03"
 output:
   pdf_document: default
@@ -64,6 +64,9 @@ for (col in c("Income", "Children", "Cars", "Age")) {
   invalid_values <- bike_data[[col]][bike_data[[col]] < 0]
   cat("Invalid values in", col, ":", if(length(invalid_values) == 0) "None" else invalid_values, "\n")
 }
+
+
+
 ```
 
 ## 3. Identify Missing Values
@@ -76,6 +79,7 @@ print(missing_bike_data)
 # Display total missing values across all columns
 total_missing <- sum(missing_bike_data)
 cat("Total missing values in bike_data:", total_missing, "\n\n")
+print(as.data.frame(missing_bike_data))
 ```
 
 ## 4. Impute Missing Values
@@ -112,6 +116,7 @@ for (var in names(missing_indices)) {
 
 ```{r check-outliers, fig.width=7, fig.height=5}
 # Define a function to detect outliers using the IQR method
+# Define a function to detect outliers using the IQR method
 detect_outliers <- function(x) {
   x_clean <- na.omit(x)
   Q1 <- quantile(x_clean, 0.25)
@@ -123,12 +128,21 @@ detect_outliers <- function(x) {
   return(outliers)
 }
 
-# Detect and print outliers for Income, Age, Children, and Cars
+# Detect outliers and plot boxplots
 outlier_vars <- c("Income", "Age", "Children", "Cars")
+
 for (var in outlier_vars) {
   outliers <- detect_outliers(bike_data[[var]])
-  cat(var, "outliers:", if (length(outliers) == 0) "None" else outliers, "\n")
+  cat("Outliers in", var, ":", if (length(outliers) == 0) "None" else outliers, "\n")
   cat("Count of", var, "outliers:", length(outliers), "\n\n")
+  
+  # Boxplot for each variable
+  p <- ggplot(bike_data, aes_string(y = var)) +
+    geom_boxplot(fill = "lightblue", outlier.colour = "red", outlier.shape = 16) +
+    labs(title = paste("Boxplot of", var), y = var) +
+    theme_minimal()
+  
+  print(p)
 }
 ```
 
@@ -150,9 +164,12 @@ barplot(table(bike_data$Education), main = "Bar Chart: Education Levels", xlab =
 
 # Histogram for Income Distribution
 hist(bike_data$Income, breaks = 20, main = "Histogram: Income Distribution", xlab = "Income", ylab = "Frequency", col = "red")
+#scatter plot for age vs income
+ggplot(bike_data, aes(x = Age, y = Income)) +
+  geom_point(color = "blue") +
+  labs(title = "Scatter Plot: Income vs Age", x = "Age", y = "Income") +
+  theme_minimal()
 
-# Scatter Plot for Income vs. Age
-plot(bike_data$Age, bike_data$Income, main = "Scatter Plot: Income vs. Age", xlab = "Age", ylab = "Income", pch = 19, col = "blue")
 ```
 
 ## 7. Purchased Bike Analysis
@@ -196,14 +213,12 @@ ggplot(bike_data, aes(x = Age, fill = Gender)) +
 
 ```
 
-## 8. Conclusions & Next Steps
+## 8. Conclusions
 
-- **Data Cleaning:** Missing values imputed using mice, outliers detected using IQR.
-- **EDA Findings:** Distributions of key variables analyzed, correlations identified.
-- **Next Steps:**
-  - Further statistical tests (e.g., Chi-square for categorical variables).
-  - Consider transformations for skewed variables like Income.
-  - Scale the process for larger datasets, ensuring robust missing-value handling.
+- **Data Cleaning:** Missing values were imputed using the MICE package. Outliers were identified using the IQR method. Categorical inconsistencies were checked and flagged.
+  
+- **EDA Findings:** Distributions of key variables were explored through visualizations. Income, Age, and Number of Cars showed noticeable outliers. Most purchases were made by individuals in the medium to high-income range. Mild correlations were observed between numeric features and bike purchases.
+
 
 ```{r final-head, echo=FALSE}
 # Final look at cleaned data
